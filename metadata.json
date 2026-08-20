@@ -1,0 +1,6 @@
+{
+  "name": "Kurma Shopee Pricing",
+  "description": "Kalkulator & Simulator Harga, Biaya Shopee, serta Manajemen Master Produk Kurma",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

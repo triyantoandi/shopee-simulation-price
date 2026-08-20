@@ -1,0 +1,85 @@
+{
+  "entities": {
+    "products": {
+      "title": "Products",
+      "description": "Master products list for Kurma seller with cost breakdowns and photos",
+      "type": "object",
+      "properties": {
+        "sku": { "type": "string" },
+        "product_name": { "type": "string" },
+        "category": { "type": "string" },
+        "raw_cost": { "type": "number" },
+        "packaging_cost": { "type": "number" },
+        "shipping_cost": { "type": "number" },
+        "overhead_cost": { "type": "number" },
+        "total_hpp": { "type": "number" },
+        "normal_price": { "type": "number" },
+        "stock": { "type": "number" },
+        "expiry_date": { "type": "string" },
+        "target_profit": { "type": "number" },
+        "target_margin": { "type": "number" },
+        "image_url": { "type": "string" },
+        "status": { "type": "string" },
+        "notes": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["sku", "product_name", "normal_price", "total_hpp"]
+    },
+    "feeRules": {
+      "title": "Shopee Fee Rules",
+      "description": "Admin fee, campaign, and affiliate fee rules for Shopee",
+      "type": "object",
+      "properties": {
+        "fee_name": { "type": "string" },
+        "fee_type": { "type": "string" },
+        "rate": { "type": "number" },
+        "fixed_amount": { "type": "number" },
+        "max_cap": { "type": "number" },
+        "tier": { "type": "string" },
+        "category_tag": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["fee_name", "fee_type", "status"]
+    },
+    "settings": {
+      "title": "Store Settings",
+      "description": "Store settings, seller tiers, and margin defaults",
+      "type": "object",
+      "properties": {
+        "storeName": { "type": "string" },
+        "defaultSellerTier": { "type": "string" },
+        "expiryWarningMonths": { "type": "number" },
+        "targetMarginDefault": { "type": "number" },
+        "autoSync": { "type": "boolean" }
+      }
+    },
+    "marketing_events": {
+      "title": "Marketing and Promo Events",
+      "description": "Event calendar, promotional campaigns, reminders, checklists, and products",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "category": { "type": "string" },
+        "priority": { "type": "string" },
+        "sourceType": { "type": "string" },
+        "isOfficial": { "type": "boolean" },
+        "isConfirmed": { "type": "boolean" },
+        "isActive": { "type": "boolean" },
+        "platforms": { "type": "array" },
+        "reminderEnabled": { "type": "boolean" },
+        "reminderDays": { "type": "array" },
+        "preparationChecklist": { "type": "array" },
+        "promotedProducts": { "type": "array" },
+        "year": { "type": "number" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["title", "date", "category", "priority"]
+    }
+  }
+}
