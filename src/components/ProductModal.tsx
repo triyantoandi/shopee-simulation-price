@@ -353,7 +353,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                         {isUploading ? 'Sedang Mengunggah & Mengompres...' : 'Klik atau Tarik Foto ke Sini'}
                       </span>
                       <span className="text-[10px] text-slate-500 font-medium">
-                        Mendukung format JPG, PNG, WEBP (Otomatis dikompres agar ringan)
+                        Mendukung format JPG, PNG, WEBP (Dikompres optimal & tersimpan di database Firestore)
                       </span>
                     </div>
                   </div>

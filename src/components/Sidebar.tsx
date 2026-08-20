@@ -109,7 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-[#FFF2EE] hover:text-[#EE4D2D] border border-slate-200 shadow-2xs transition-all duration-200 active:scale-95 disabled:opacity-50"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-[#EE4D2D]' : 'text-[#EE4D2D]'}`} />
-          <span>{isSyncing ? 'Menyinkronkan...' : 'Sync Data'}</span>
+          <span>{isSyncing ? 'Menyinkronkan...' : 'Sync Firestore'}</span>
         </button>
 
         <div className="text-center text-[11px] text-slate-400 font-medium tracking-wide">

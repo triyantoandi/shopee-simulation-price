@@ -12,45 +12,6 @@ import { MarketingEvent, EventNotification } from '../types';
 import { INITIAL_MARKETING_EVENTS } from '../data/calendarData';
 
 const MARKETING_EVENTS_COL = 'marketing_events';
-const STORAGE_EVENTS_KEY = 'kurma_marketing_events_cache';
-const STORAGE_NOTIF_KEY = 'kurma_event_notifications_cache';
-
-// Local storage caching helpers
-export function getLocalCachedEvents(): MarketingEvent[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_EVENTS_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {
-    console.warn('Failed reading cached events', e);
-  }
-  return INITIAL_MARKETING_EVENTS;
-}
-
-export function saveLocalCachedEvents(events: MarketingEvent[]): void {
-  try {
-    localStorage.setItem(STORAGE_EVENTS_KEY, JSON.stringify(events));
-  } catch (e) {
-    console.warn('Failed saving cached events', e);
-  }
-}
-
-export function getLocalCachedNotifications(): EventNotification[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_NOTIF_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {
-    console.warn('Failed reading cached notifications', e);
-  }
-  return [];
-}
-
-export function saveLocalCachedNotifications(notifs: EventNotification[]): void {
-  try {
-    localStorage.setItem(STORAGE_NOTIF_KEY, JSON.stringify(notifs));
-  } catch (e) {
-    console.warn('Failed saving cached notifications', e);
-  }
-}
 
 // Seed initial marketing events to Firestore if empty
 export async function seedInitialMarketingEvents(): Promise<void> {
@@ -69,25 +30,23 @@ export async function seedInitialMarketingEvents(): Promise<void> {
   }
 }
 
-// Subscribe real-time marketing events
+// Subscribe real-time marketing events directly from Firestore
 export function subscribeMarketingEvents(
   onUpdate: (events: MarketingEvent[]) => void,
   onError?: (error: Error) => void
 ) {
   return onSnapshot(
     collection(db, MARKETING_EVENTS_COL),
-    (snapshot) => {
+    async (snapshot) => {
       if (snapshot.empty) {
-        seedInitialMarketingEvents();
+        await seedInitialMarketingEvents();
         onUpdate(INITIAL_MARKETING_EVENTS);
-        saveLocalCachedEvents(INITIAL_MARKETING_EVENTS);
         return;
       }
       const events: MarketingEvent[] = [];
       snapshot.forEach((docSnap) => {
         events.push({ id: docSnap.id, ...docSnap.data() } as MarketingEvent);
       });
-      saveLocalCachedEvents(events);
       onUpdate(events);
     },
     (err) => {
@@ -97,19 +56,19 @@ export function subscribeMarketingEvents(
   );
 }
 
-// Save or Update an event
+// Save or Update an event to Firestore
 export async function saveMarketingEventToCloud(event: MarketingEvent): Promise<void> {
   const ref = doc(db, MARKETING_EVENTS_COL, event.id);
   await setDoc(ref, event, { merge: true });
 }
 
-// Delete custom event
+// Delete custom event from Firestore
 export async function deleteMarketingEventFromCloud(eventId: string): Promise<void> {
   const ref = doc(db, MARKETING_EVENTS_COL, eventId);
   await deleteDoc(ref);
 }
 
-// Batch save events
+// Batch save events to Firestore
 export async function batchSaveEventsToCloud(events: MarketingEvent[]): Promise<void> {
   const batch = writeBatch(db);
   events.forEach((ev) => {

@@ -1,15 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Product, FeeRule, AppSettings, MarketingEvent, EventNotification } from './types';
-import {
-  getStoredProducts,
-  saveStoredProducts,
-  getStoredFees,
-  saveStoredFees,
-  getStoredSettings,
-  saveStoredSettings,
-  computeDashboardStats,
-  resetToDefaults
-} from './utils/storage';
+import { computeDashboardStats } from './utils/storage';
+import { INITIAL_PRODUCTS, INITIAL_FEES, INITIAL_SETTINGS } from './data/initialData';
+import { INITIAL_MARKETING_EVENTS } from './data/calendarData';
 import {
   subscribeProducts,
   subscribeFees,
@@ -26,10 +19,7 @@ import {
   subscribeMarketingEvents,
   saveMarketingEventToCloud,
   deleteMarketingEventFromCloud,
-  getLocalCachedEvents,
-  generateEventReminders,
-  getLocalCachedNotifications,
-  saveLocalCachedNotifications
+  generateEventReminders
 } from './services/calendarService';
 
 import { Sidebar } from './components/Sidebar';
@@ -45,19 +35,13 @@ import { Toast } from './components/Toast';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [products, setProducts] = useState<Product[]>([]);
-  const [fees, setFees] = useState<FeeRule[]>([]);
-  const [events, setEvents] = useState<MarketingEvent[]>([]);
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [fees, setFees] = useState<FeeRule[]>(INITIAL_FEES);
+  const [events, setEvents] = useState<MarketingEvent[]>(INITIAL_MARKETING_EVENTS);
   const [notifications, setNotifications] = useState<EventNotification[]>([]);
   const [highlightEventId, setHighlightEventId] = useState<string | undefined>(undefined);
 
-  const [settings, setSettings] = useState<AppSettings>({
-    expiryWarningMonths: 3,
-    defaultSellerTier: 'STAR_SELLER',
-    targetMarginDefault: 20,
-    storeName: 'Toko Kurma Berkah Shopee',
-    autoSync: true
-  });
+  const [settings, setSettings] = useState<AppSettings>(INITIAL_SETTINGS);
 
   const [simSelectedProductId, setSimSelectedProductId] = useState<string>('');
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -67,21 +51,9 @@ export default function App() {
     type: 'success' | 'warning' | 'error' | 'info';
   } | null>(null);
 
-  // Initial Load & Real-time Firestore Subscriptions
+  // Real-time Firestore Subscriptions (Single Source of Truth)
   useEffect(() => {
-    // Load local storage cache first
-    setProducts(getStoredProducts());
-    setFees(getStoredFees());
-    setSettings(getStoredSettings());
-    const cachedEvents = getLocalCachedEvents();
-    setEvents(cachedEvents);
-
-    const cachedNotifs = getLocalCachedNotifications();
-    const freshNotifs = generateEventReminders(cachedEvents, cachedNotifs);
-    setNotifications(freshNotifs);
-    saveLocalCachedNotifications(freshNotifs);
-
-    // Real-time Firestore Subscriptions
+    // 1. Subscribe to Firestore Products collection
     const unsubProducts = subscribeProducts(
       (prods) => {
         setProducts(prods);
@@ -90,6 +62,7 @@ export default function App() {
       () => setIsCloudConnected(false)
     );
 
+    // 2. Subscribe to Firestore Fee Rules collection
     const unsubFees = subscribeFees(
       (f) => {
         setFees(f);
@@ -98,6 +71,7 @@ export default function App() {
       () => setIsCloudConnected(false)
     );
 
+    // 3. Subscribe to Firestore Settings document
     const unsubSettings = subscribeSettings(
       (s) => {
         setSettings(s);
@@ -106,14 +80,11 @@ export default function App() {
       () => setIsCloudConnected(false)
     );
 
+    // 4. Subscribe to Firestore Marketing Events collection
     const unsubEvents = subscribeMarketingEvents(
       (cloudEvents) => {
         setEvents(cloudEvents);
-        setNotifications((prev) => {
-          const generated = generateEventReminders(cloudEvents, prev);
-          saveLocalCachedNotifications(generated);
-          return generated;
-        });
+        setNotifications((prev) => generateEventReminders(cloudEvents, prev));
         setIsCloudConnected(true);
       },
       () => setIsCloudConnected(false)
@@ -137,163 +108,123 @@ export default function App() {
     }, 3500);
   };
 
-  // Product CRUD
+  // Product CRUD (Direct to Firestore with Photo Base64/URL)
   const handleSaveProduct = async (prod: Product) => {
-    const existingIdx = products.findIndex((p) => p.id === prod.id);
-    let updated: Product[];
-    if (existingIdx >= 0) {
-      updated = [...products];
-      updated[existingIdx] = prod;
-    } else {
-      updated = [prod, ...products];
-    }
-    setProducts(updated);
-    saveStoredProducts(updated);
-
     try {
       await saveProductToCloud(prod);
-      showToast('Produk tersimpan di Firestore & Local Storage!', 'success');
-    } catch {
-      showToast('Tersimpan di penyimpan lokal.', 'warning');
+      showToast('Produk & Foto tersimpan permanen di Firestore Database!', 'success');
+    } catch (err) {
+      console.error('Error saving product to Firestore:', err);
+      showToast('Gagal menyimpan ke Firestore. Periksa koneksi internet.', 'error');
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
-    const updated = products.filter((p) => p.id !== id);
-    setProducts(updated);
-    saveStoredProducts(updated);
-
     try {
       await deleteProductFromCloud(id);
       showToast('Produk dihapus dari Firestore Database!', 'info');
-    } catch {
-      showToast('Dihapus dari penyimpan lokal.', 'warning');
+    } catch (err) {
+      console.error('Error deleting product from Firestore:', err);
+      showToast('Gagal menghapus produk dari Firestore.', 'error');
     }
   };
 
   const handleBulkDeleteProducts = async (ids: string[]) => {
-    const updated = products.filter((p) => !ids.includes(p.id));
-    setProducts(updated);
-    saveStoredProducts(updated);
-
     try {
       await deleteProductsBatchFromCloud(ids);
-      showToast(`${ids.length} produk berhasil dihapus masal!`, 'info');
-    } catch {
-      showToast(`${ids.length} produk dihapus dari penyimpan lokal.`, 'warning');
+      showToast(`${ids.length} produk berhasil dihapus dari Firestore!`, 'info');
+    } catch (err) {
+      console.error('Error batch deleting products from Firestore:', err);
+      showToast('Gagal menghapus masal dari Firestore.', 'error');
     }
   };
 
   const handleBulkUpdateStatus = async (ids: string[], status: 'ACTIVE' | 'INACTIVE') => {
-    const updatedProds = products.map((p) =>
-      ids.includes(p.id) ? { ...p, status } : p
-    );
-    setProducts(updatedProds);
-    saveStoredProducts(updatedProds);
-
     try {
-      const prodsToSave = updatedProds.filter((p) => ids.includes(p.id));
+      const prodsToSave = products
+        .filter((p) => ids.includes(p.id))
+        .map((p) => ({ ...p, status }));
       await saveProductsBatchToCloud(prodsToSave);
       showToast(
-        `Status ${ids.length} produk diubah menjadi ${status === 'ACTIVE' ? 'AKTIF' : 'NONAKTIF'}!`,
+        `Status ${ids.length} produk diubah menjadi ${status === 'ACTIVE' ? 'AKTIF' : 'NONAKTIF'} di Firestore!`,
         'success'
       );
-    } catch {
-      showToast('Status diperbarui di penyimpan lokal.', 'warning');
+    } catch (err) {
+      console.error('Error batch updating status:', err);
+      showToast('Gagal memperbarui status produk di Firestore.', 'error');
     }
   };
 
   const handleImportProducts = async (importedProds: Product[]) => {
-    setProducts(importedProds);
-    saveStoredProducts(importedProds);
-
     try {
       await saveProductsBatchToCloud(importedProds);
-      showToast('Import produk berhasil tersinkron ke Firestore!', 'success');
-    } catch {
-      showToast('Import tersimpan di penyimpanan lokal.', 'warning');
+      showToast(`${importedProds.length} produk import tersimpan ke Firestore!`, 'success');
+    } catch (err) {
+      console.error('Error importing products to Firestore:', err);
+      showToast('Gagal mengimpor produk ke Firestore.', 'error');
     }
   };
 
-  // Fee Rules CRUD
+  // Fee Rules CRUD (Direct to Firestore)
   const handleSaveFees = async (updatedFees: FeeRule[]) => {
-    setFees(updatedFees);
-    saveStoredFees(updatedFees);
-
     try {
       await saveFeesToCloud(updatedFees);
       showToast('Aturan fee tersimpan di Firestore Database!', 'success');
-    } catch {
-      showToast('Tersimpan di penyimpanan lokal.', 'warning');
+    } catch (err) {
+      console.error('Error saving fees to Firestore:', err);
+      showToast('Gagal menyimpan aturan fee ke Firestore.', 'error');
     }
   };
 
-  // Marketing Calendar CRUD
+  // Marketing Calendar CRUD (Direct to Firestore)
   const handleSaveMarketingEvent = async (updatedEvent: MarketingEvent) => {
-    const existingIdx = events.findIndex((e) => e.id === updatedEvent.id);
-    let newEvents: MarketingEvent[];
-    if (existingIdx >= 0) {
-      newEvents = [...events];
-      newEvents[existingIdx] = updatedEvent;
-    } else {
-      newEvents = [updatedEvent, ...events];
-    }
-    setEvents(newEvents);
-
     try {
       await saveMarketingEventToCloud(updatedEvent);
+      showToast('Event promo tersimpan di Firestore Database!', 'success');
     } catch (err) {
-      console.warn('Gagal simpan event ke Firestore:', err);
+      console.error('Error saving event to Firestore:', err);
+      showToast('Gagal menyimpan event ke Firestore.', 'error');
     }
   };
 
   const handleDeleteMarketingEvent = async (eventId: string) => {
-    const updated = events.filter((e) => e.id !== eventId);
-    setEvents(updated);
-
     try {
       await deleteMarketingEventFromCloud(eventId);
+      showToast('Event promo dihapus dari Firestore Database!', 'info');
     } catch (err) {
-      console.warn('Gagal hapus event di Firestore:', err);
+      console.error('Error deleting event from Firestore:', err);
+      showToast('Gagal menghapus event dari Firestore.', 'error');
     }
   };
 
-  // Settings Save
+  // Settings Save (Direct to Firestore)
   const handleSaveSettings = async (updatedSettings: AppSettings) => {
-    setSettings(updatedSettings);
-    saveStoredSettings(updatedSettings);
-
     try {
       await saveSettingsToCloud(updatedSettings);
       showToast('Pengaturan tersimpan di Firestore Database!', 'success');
-    } catch {
-      showToast('Tersimpan di penyimpanan lokal.', 'warning');
+    } catch (err) {
+      console.error('Error saving settings to Firestore:', err);
+      showToast('Gagal menyimpan pengaturan ke Firestore.', 'error');
     }
   };
 
-  // Reset Data
+  // Reset Data (Direct to Firestore)
   const handleResetData = async () => {
-    resetToDefaults();
-    setProducts(getStoredProducts());
-    setFees(getStoredFees());
-    setSettings(getStoredSettings());
-
     try {
       await resetCloudToDefaults();
-      showToast('Database Firestore & Local berhasil direset!', 'success');
-    } catch {
-      showToast('Penyimpanan lokal berhasil direset.', 'info');
+      showToast('Seluruh koleksi Firestore berhasil direset ke standar!', 'success');
+    } catch (err) {
+      console.error('Error resetting Firestore:', err);
+      showToast('Gagal mereset data Firestore.', 'error');
     }
   };
 
-  // Sync Simulation Action
+  // Manual Refresh / Sync trigger from Firestore
   const handleSyncData = () => {
     setIsSyncing(true);
     setTimeout(() => {
-      setProducts(getStoredProducts());
-      setFees(getStoredFees());
       setIsSyncing(false);
-      showToast('Data disinkronkan!', 'success');
+      showToast('Sinkronisasi real-time Firestore aktif & terhubung!', 'success');
     }, 600);
   };
 
@@ -314,16 +245,13 @@ export default function App() {
   };
 
   const handleMarkNotificationRead = (notifId: string) => {
-    const updated = notifications.map((n) =>
-      n.id === notifId ? { ...n, isRead: true } : n
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notifId ? { ...n, isRead: true } : n))
     );
-    setNotifications(updated);
-    saveLocalCachedNotifications(updated);
   };
 
   const handleClearAllNotifications = () => {
     setNotifications([]);
-    saveLocalCachedNotifications([]);
   };
 
   const dashboardStats = computeDashboardStats(products, fees, settings.expiryWarningMonths);

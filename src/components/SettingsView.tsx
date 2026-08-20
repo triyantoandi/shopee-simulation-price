@@ -156,14 +156,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <div className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
         <h4 className="font-bold text-slate-800 text-base pb-3 border-b border-slate-100 flex items-center gap-2">
           <Database className="w-4 h-4 text-[#EE4D2D]" />
-          Manajemen Data Local Storage
+          Status & Manajemen Database Firebase Firestore
         </h4>
+
+        <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></div>
+            <div>
+              <span className="font-black text-emerald-900 block">Cloud Database Aktif & Terhubung</span>
+              <span className="text-emerald-700 text-[11px]">
+                Seluruh data produk, foto kurma (Base64/URL), aturan fee, setting, dan kalender tersimpan permanen di cloud Firestore.
+              </span>
+            </div>
+          </div>
+          <span className="px-3 py-1 bg-emerald-600 text-white font-bold rounded-full text-[10px] shrink-0">
+            Realtime Firestore
+          </span>
+        </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-rose-50/60 rounded-2xl border border-rose-200 text-xs">
           <div>
-            <span className="font-bold text-slate-800 block mb-0.5">Reset ke Data Standar Awal</span>
+            <span className="font-bold text-slate-800 block mb-0.5">Reset Database Firestore ke Data Standar Awal</span>
             <span className="text-slate-600">
-              Kembalikan daftar produk kurma, fee Shopee, dan pengaturan ke data contoh awal.
+              Menimpa seluruh data produk kurma, fee Shopee, dan pengaturan di koleksi Firestore dengan data contoh awal.
             </span>
           </div>
           <button
@@ -172,7 +187,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             className="px-5 py-2.5 rounded-full bg-rose-600 text-white font-bold hover:bg-rose-700 transition-colors flex items-center gap-1.5 shrink-0 shadow-md shadow-rose-600/20"
           >
             <RotateCcw className="w-4 h-4" />
-            Reset Data Awal
+            Reset Data Firestore
           </button>
         </div>
       </div>
