@@ -16,6 +16,29 @@ export const FEES_COL = 'feeRules';
 export const SETTINGS_COL = 'settings';
 export const SETTINGS_DOC_ID = 'main';
 
+/**
+ * Recursively cleans and removes all undefined values from objects
+ * so Firestore setDoc/updateDoc will never throw invalid data errors.
+ */
+export function sanitizeForFirestore<T>(data: T): T {
+  if (data === null || data === undefined) {
+    return null as unknown as T;
+  }
+  if (Array.isArray(data)) {
+    return data.map((item) => sanitizeForFirestore(item)) as unknown as T;
+  }
+  if (typeof data === 'object' && data !== null && !(data instanceof Date)) {
+    const cleaned: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined) {
+        cleaned[key] = sanitizeForFirestore(value);
+      }
+    }
+    return cleaned as T;
+  }
+  return data;
+}
+
 // Seed Initial Data to Firestore if collections are empty
 export async function seedInitialFirestoreData(): Promise<void> {
   try {
@@ -24,7 +47,7 @@ export async function seedInitialFirestoreData(): Promise<void> {
       const batch = writeBatch(db);
       INITIAL_PRODUCTS.forEach((p) => {
         const ref = doc(db, PRODUCTS_COL, p.id);
-        batch.set(ref, p);
+        batch.set(ref, sanitizeForFirestore(p));
       });
       await batch.commit();
     }
@@ -34,19 +57,19 @@ export async function seedInitialFirestoreData(): Promise<void> {
       const batch = writeBatch(db);
       INITIAL_FEES.forEach((f) => {
         const ref = doc(db, FEES_COL, f.id);
-        batch.set(ref, f);
+        batch.set(ref, sanitizeForFirestore(f));
       });
       await batch.commit();
     }
 
     const settingsRef = doc(db, SETTINGS_COL, SETTINGS_DOC_ID);
-    await setDoc(settingsRef, INITIAL_SETTINGS, { merge: true });
+    await setDoc(settingsRef, sanitizeForFirestore(INITIAL_SETTINGS), { merge: true });
   } catch (err) {
     console.warn('Gagal melakukan seed data ke Firestore:', err);
   }
 }
 
-// Real-time Subscriptions directly to Firestore (No Local Storage)
+// Real-time Subscriptions directly to Firestore
 export function subscribeProducts(
   onUpdate: (products: Product[]) => void,
   onError?: (error: Error) => void
@@ -55,7 +78,6 @@ export function subscribeProducts(
     collection(db, PRODUCTS_COL),
     async (snapshot) => {
       if (snapshot.empty) {
-        // If collection empty, seed initial products to Firestore
         await seedInitialFirestoreData();
         onUpdate(INITIAL_PRODUCTS);
         return;
@@ -120,11 +142,11 @@ export function subscribeSettings(
   );
 }
 
-// Firestore Mutation Functions (Direct Cloud Storage)
+// Firestore Mutation Functions (Direct Cloud Storage with Sanitization)
 export async function saveProductToCloud(product: Product): Promise<void> {
   const ref = doc(db, PRODUCTS_COL, product.id);
-  // Store full product details including image_url (Base64 or URL) in Firestore document
-  await setDoc(ref, product, { merge: true });
+  const cleanData = sanitizeForFirestore(product);
+  await setDoc(ref, cleanData, { merge: true });
 }
 
 export async function deleteProductFromCloud(productId: string): Promise<void> {
@@ -145,7 +167,7 @@ export async function saveProductsBatchToCloud(products: Product[]): Promise<voi
   const batch = writeBatch(db);
   products.forEach((p) => {
     const ref = doc(db, PRODUCTS_COL, p.id);
-    batch.set(ref, p, { merge: true });
+    batch.set(ref, sanitizeForFirestore(p), { merge: true });
   });
   await batch.commit();
 }
@@ -154,32 +176,32 @@ export async function saveFeesToCloud(fees: FeeRule[]): Promise<void> {
   const batch = writeBatch(db);
   fees.forEach((f) => {
     const ref = doc(db, FEES_COL, f.id);
-    batch.set(ref, f, { merge: true });
+    batch.set(ref, sanitizeForFirestore(f), { merge: true });
   });
   await batch.commit();
 }
 
 export async function saveSettingsToCloud(settings: AppSettings): Promise<void> {
   const ref = doc(db, SETTINGS_COL, SETTINGS_DOC_ID);
-  await setDoc(ref, settings, { merge: true });
+  const cleanData = sanitizeForFirestore(settings);
+  await setDoc(ref, cleanData, { merge: true });
 }
 
 export async function resetCloudToDefaults(): Promise<void> {
-  // Clear current collections in Firestore and replace with defaults
   const batch = writeBatch(db);
 
   INITIAL_PRODUCTS.forEach((p) => {
     const ref = doc(db, PRODUCTS_COL, p.id);
-    batch.set(ref, p);
+    batch.set(ref, sanitizeForFirestore(p));
   });
 
   INITIAL_FEES.forEach((f) => {
     const ref = doc(db, FEES_COL, f.id);
-    batch.set(ref, f);
+    batch.set(ref, sanitizeForFirestore(f));
   });
 
   const settingsRef = doc(db, SETTINGS_COL, SETTINGS_DOC_ID);
-  batch.set(settingsRef, INITIAL_SETTINGS);
+  batch.set(settingsRef, sanitizeForFirestore(INITIAL_SETTINGS));
 
   await batch.commit();
 }

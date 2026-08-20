@@ -110,101 +110,130 @@ export default function App() {
 
   // Product CRUD (Direct to Firestore with Photo Base64/URL)
   const handleSaveProduct = async (prod: Product) => {
+    setProducts((prev) => {
+      const idx = prev.findIndex((p) => p.id === prod.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = prod;
+        return next;
+      }
+      return [prod, ...prev];
+    });
+
     try {
       await saveProductToCloud(prod);
-      showToast('Produk & Foto tersimpan permanen di Firestore Database!', 'success');
-    } catch (err) {
+      showToast('Produk & Foto tersimpan di Firestore Database!', 'success');
+    } catch (err: any) {
       console.error('Error saving product to Firestore:', err);
-      showToast('Gagal menyimpan ke Firestore. Periksa koneksi internet.', 'error');
+      showToast('Gagal menyimpan ke Firestore. Menunggu sinkronisasi...', 'warning');
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
+    setProducts((prev) => prev.filter((p) => p.id !== id));
     try {
       await deleteProductFromCloud(id);
       showToast('Produk dihapus dari Firestore Database!', 'info');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error deleting product from Firestore:', err);
-      showToast('Gagal menghapus produk dari Firestore.', 'error');
+      showToast('Gagal menghapus produk dari Firestore.', 'warning');
     }
   };
 
   const handleBulkDeleteProducts = async (ids: string[]) => {
+    setProducts((prev) => prev.filter((p) => !ids.includes(p.id)));
     try {
       await deleteProductsBatchFromCloud(ids);
       showToast(`${ids.length} produk berhasil dihapus dari Firestore!`, 'info');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error batch deleting products from Firestore:', err);
-      showToast('Gagal menghapus masal dari Firestore.', 'error');
+      showToast('Gagal menghapus masal dari Firestore.', 'warning');
     }
   };
 
   const handleBulkUpdateStatus = async (ids: string[], status: 'ACTIVE' | 'INACTIVE') => {
+    setProducts((prev) =>
+      prev.map((p) => (ids.includes(p.id) ? { ...p, status } : p))
+    );
     try {
       const prodsToSave = products
         .filter((p) => ids.includes(p.id))
         .map((p) => ({ ...p, status }));
       await saveProductsBatchToCloud(prodsToSave);
       showToast(
-        `Status ${ids.length} produk diubah menjadi ${status === 'ACTIVE' ? 'AKTIF' : 'NONAKTIF'} di Firestore!`,
+        `Status ${ids.length} produk diubah menjadi ${status === 'ACTIVE' ? 'AKTIF' : 'NONAKTIF'}!`,
         'success'
       );
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error batch updating status:', err);
-      showToast('Gagal memperbarui status produk di Firestore.', 'error');
+      showToast('Gagal memperbarui status di Firestore.', 'warning');
     }
   };
 
   const handleImportProducts = async (importedProds: Product[]) => {
+    setProducts(importedProds);
     try {
       await saveProductsBatchToCloud(importedProds);
       showToast(`${importedProds.length} produk import tersimpan ke Firestore!`, 'success');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error importing products to Firestore:', err);
-      showToast('Gagal mengimpor produk ke Firestore.', 'error');
+      showToast('Gagal mengimpor produk ke Firestore.', 'warning');
     }
   };
 
   // Fee Rules CRUD (Direct to Firestore)
   const handleSaveFees = async (updatedFees: FeeRule[]) => {
+    setFees(updatedFees);
     try {
       await saveFeesToCloud(updatedFees);
       showToast('Aturan fee tersimpan di Firestore Database!', 'success');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving fees to Firestore:', err);
-      showToast('Gagal menyimpan aturan fee ke Firestore.', 'error');
+      showToast('Gagal menyimpan aturan fee ke Firestore.', 'warning');
     }
   };
 
   // Marketing Calendar CRUD (Direct to Firestore)
   const handleSaveMarketingEvent = async (updatedEvent: MarketingEvent) => {
+    setEvents((prev) => {
+      const idx = prev.findIndex((e) => e.id === updatedEvent.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = updatedEvent;
+        return next;
+      }
+      return [updatedEvent, ...prev];
+    });
+
     try {
       await saveMarketingEventToCloud(updatedEvent);
       showToast('Event promo tersimpan di Firestore Database!', 'success');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving event to Firestore:', err);
-      showToast('Gagal menyimpan event ke Firestore.', 'error');
+      showToast('Gagal menyimpan event ke Firestore.', 'warning');
     }
   };
 
   const handleDeleteMarketingEvent = async (eventId: string) => {
+    setEvents((prev) => prev.filter((e) => e.id !== eventId));
     try {
       await deleteMarketingEventFromCloud(eventId);
       showToast('Event promo dihapus dari Firestore Database!', 'info');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error deleting event from Firestore:', err);
-      showToast('Gagal menghapus event dari Firestore.', 'error');
+      showToast('Gagal menghapus event dari Firestore.', 'warning');
     }
   };
 
   // Settings Save (Direct to Firestore)
   const handleSaveSettings = async (updatedSettings: AppSettings) => {
+    setSettings(updatedSettings);
     try {
       await saveSettingsToCloud(updatedSettings);
       showToast('Pengaturan tersimpan di Firestore Database!', 'success');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving settings to Firestore:', err);
-      showToast('Gagal menyimpan pengaturan ke Firestore.', 'error');
+      showToast('Gagal menyimpan pengaturan ke Firestore.', 'warning');
     }
   };
 

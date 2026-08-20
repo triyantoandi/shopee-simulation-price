@@ -10,6 +10,7 @@ import {
 import { db } from '../lib/firebase';
 import { MarketingEvent, EventNotification } from '../types';
 import { INITIAL_MARKETING_EVENTS } from '../data/calendarData';
+import { sanitizeForFirestore } from './firestoreService';
 
 const MARKETING_EVENTS_COL = 'marketing_events';
 
@@ -21,7 +22,7 @@ export async function seedInitialMarketingEvents(): Promise<void> {
       const batch = writeBatch(db);
       INITIAL_MARKETING_EVENTS.slice(0, 300).forEach((ev) => {
         const ref = doc(db, MARKETING_EVENTS_COL, ev.id);
-        batch.set(ref, ev);
+        batch.set(ref, sanitizeForFirestore(ev));
       });
       await batch.commit();
     }
@@ -59,7 +60,7 @@ export function subscribeMarketingEvents(
 // Save or Update an event to Firestore
 export async function saveMarketingEventToCloud(event: MarketingEvent): Promise<void> {
   const ref = doc(db, MARKETING_EVENTS_COL, event.id);
-  await setDoc(ref, event, { merge: true });
+  await setDoc(ref, sanitizeForFirestore(event), { merge: true });
 }
 
 // Delete custom event from Firestore
@@ -73,7 +74,7 @@ export async function batchSaveEventsToCloud(events: MarketingEvent[]): Promise<
   const batch = writeBatch(db);
   events.forEach((ev) => {
     const ref = doc(db, MARKETING_EVENTS_COL, ev.id);
-    batch.set(ref, ev, { merge: true });
+    batch.set(ref, sanitizeForFirestore(ev), { merge: true });
   });
   await batch.commit();
 }

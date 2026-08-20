@@ -209,16 +209,16 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       sku: sku.trim().toUpperCase(),
       product_name: productName.trim(),
       category,
-      image_url: imageUrl.trim() || undefined,
+      image_url: imageUrl.trim() ? imageUrl.trim() : '',
       hppBreakdown,
       total_hpp: totalHppComputed,
-      normal_price: Number(normalPrice),
-      stock: Number(stock),
-      expiry_date: expiryDate,
-      target_profit: Number(targetProfit),
-      target_margin: Number(targetMargin),
+      normal_price: Number(normalPrice) || 0,
+      stock: Number(stock) || 0,
+      expiry_date: expiryDate || '',
+      target_profit: Number(targetProfit) || 0,
+      target_margin: Number(targetMargin) || 0,
       status,
-      created_at: initialProduct ? initialProduct.created_at : new Date().toISOString()
+      created_at: initialProduct?.created_at || new Date().toISOString()
     };
 
     onSave(product);
